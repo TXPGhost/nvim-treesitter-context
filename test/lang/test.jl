@@ -1,4 +1,5 @@
-struct Foo{T}
+# {{TEST}}
+struct Foo{T} # {{CONTEXT}}
     bar::T # T can be any type
     baz::Int
     # comment
@@ -10,79 +11,80 @@ struct Foo{T}
     # comment
     # comment
     # comment
-    # comment
+    # {{CURSOR}}
 end
-
-function myfunc(
-    x::Vector,
-    y::Int,
-)
+# {{TEST}}
+function myfunc( # {{CONTEXT}}
+    x::Vector, # {{CONTEXT}}
+    y::Int, # {{CONTEXT}}
+) # {{CONTEXT}}
     @assert y > 0
-    for i in 1:y
-        if i == 0 &&
-           i == 0 # Unnecessary condition to go over 2 lines.
+    for i in 1:y # {{CONTEXT}}
+        if i == 0 && # {{CONTEXT}}
+            i == 0 # {{CONTEXT}}
             println("zero")
             # comment
             # comment
             # comment
             # comment
-            # comment
+            # {{CURSOR}}
         elseif i == 1
             println("one")
             # comment
             # comment
             # comment
             # comment
-            # comment
+            # {{CURSOR}}
         else
             println("other")
             # comment
             # comment
             # comment
             # comment
-            # comment
-        end
-    end
+            # {{CURSOR}}
+        end # {{POPCONTEXT}}
+        # {{POPCONTEXT}}
+    end # {{POPCONTEXT}}
     # comment
     # comment
     # comment
     # comment
-    # comment
+    # {{CURSOR}}
     foo = y
-    while foo > 0 &&
-        foo > 0 # Unnecessary condition to go over 2 lines.
+    while foo > 0 && # {{CONTEXT}}
+        foo > 0 # {{CONTEXT}}
         println(foo)
         foo -= 1
         # comment
         # comment
         # comment
         # comment
-        # comment
-    end
+        # {{CURSOR}}
+    end # {{POPCONTEXT}}
+    # {{POPCONTEXT}}
     # comment
     # comment
     # comment
-    # comment
-    # comment
-    try
+    # {{CURSOR}}
+    try # {{CONTEXT}}
         sqrt("ten")
         # comment
         # comment
         # comment
         # comment
-        # comment
+        # {{CURSOR}}
     catch e
         println(e)
         # comment
         # comment
         # comment
         # comment
-        # comment
-    end
+        # {{CURSOR}}
+    end # {{POPCONTEXT}}
     # comment
     # comment
     # comment
     # comment
-    # comment
+    # {{CURSOR}}
     return y * x
 end

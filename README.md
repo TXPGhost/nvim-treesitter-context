@@ -40,11 +40,13 @@ Note: support for specific languages is strictly community maintained and can br
   - [x] `diff`
   - [x] `elixir`
   - [x] `elm`
+  - [x] `enforce`
   - [x] `fennel`
   - [x] `fish`
   - [x] `fortran`
   - [x] `gdscript`
   - [x] `glimmer`
+  - [x] `glsl`
   - [x] `go`
   - [x] `graphql`
   - [x] `groovy`
@@ -58,6 +60,7 @@ Note: support for specific languages is strictly community maintained and can br
   - [x] `jsonnet`
   - [x] `julia`
   - [x] `kdl`
+  - [x] `kotlin`
   - [x] `latex`
   - [x] `liquidsoap`
   - [x] `lua`
@@ -66,13 +69,11 @@ Note: support for specific languages is strictly community maintained and can br
   - [x] `matlab`
   - [x] `nim`
   - [x] `nix`
-  - [x] `norg`
   - [x] `nu`
   - [x] `objdump`
   - [x] `ocaml`
   - [x] `ocaml_interface`
   - [x] `odin`
-  - [x] `org`
   - [x] `php`
   - [x] `php_only`
   - [x] `prisma`
@@ -85,6 +86,7 @@ Note: support for specific languages is strictly community maintained and can br
   - [x] `scss`
   - [x] `smali`
   - [x] `solidity`
+  - [x] `starlark`
   - [x] `svelte`
   - [x] `swift`
   - [x] `tact`
@@ -124,8 +126,11 @@ Note: support for specific languages is strictly community maintained and can br
   - [ ] `bibtex`
   - [ ] `bicep`
   - [ ] `bitbake`
+  - [ ] `blade`
   - [ ] `blueprint`
   - [ ] `bp`
+  - [ ] `brightscript`
+  - [ ] `caddy`
   - [ ] `cairo`
   - [ ] `chatito`
   - [ ] `circom`
@@ -146,6 +151,7 @@ Note: support for specific languages is strictly community maintained and can br
   - [ ] `dtd`
   - [ ] `earthfile`
   - [ ] `ebnf`
+  - [ ] `ecma`
   - [ ] `editorconfig`
   - [ ] `eds`
   - [ ] `eex`
@@ -174,7 +180,6 @@ Note: support for specific languages is strictly community maintained and can br
   - [ ] `gleam`
   - [ ] `glimmer_javascript`
   - [ ] `glimmer_typescript`
-  - [ ] `glsl`
   - [ ] `gn`
   - [ ] `gnuplot`
   - [ ] `goctl`
@@ -197,20 +202,27 @@ Note: support for specific languages is strictly community maintained and can br
   - [ ] `hlsplaylist`
   - [ ] `hocon`
   - [ ] `hoon`
+  - [ ] `html_tags`
   - [ ] `htmldjango`
   - [ ] `http`
   - [ ] `hurl`
   - [ ] `hyprlang`
   - [ ] `idl`
+  - [ ] `idris`
   - [ ] `inko`
+  - [ ] `ipkg`
   - [ ] `ispc`
+  - [ ] `javadoc`
+  - [ ] `jinja`
+  - [ ] `jinja_inline`
   - [ ] `jq`
   - [ ] `jsdoc`
   - [ ] `json5`
   - [ ] `jsonc`
+  - [ ] `jsx`
   - [ ] `just`
+  - [ ] `kcl`
   - [ ] `kconfig`
-  - [ ] `kotlin`
   - [ ] `koto`
   - [ ] `kusto`
   - [ ] `lalrpop`
@@ -266,6 +278,7 @@ Note: support for specific languages is strictly community maintained and can br
   - [ ] `racket`
   - [ ] `ralph`
   - [ ] `rasi`
+  - [ ] `razor`
   - [ ] `rbs`
   - [ ] `re2c`
   - [ ] `readline`
@@ -284,6 +297,7 @@ Note: support for specific languages is strictly community maintained and can br
   - [ ] `scheme`
   - [ ] `sflog`
   - [ ] `slang`
+  - [ ] `slim`
   - [ ] `slint`
   - [ ] `smithy`
   - [ ] `snakemake`
@@ -294,7 +308,6 @@ Note: support for specific languages is strictly community maintained and can br
   - [ ] `sql`
   - [ ] `squirrel`
   - [ ] `ssh_config`
-  - [ ] `starlark`
   - [ ] `strace`
   - [ ] `styled`
   - [ ] `supercollider`
@@ -305,6 +318,7 @@ Note: support for specific languages is strictly community maintained and can br
   - [ ] `systemtap`
   - [ ] `t32`
   - [ ] `tablegen`
+  - [ ] `tera`
   - [ ] `textproto`
   - [ ] `thrift`
   - [ ] `tiger`
@@ -365,7 +379,7 @@ require'treesitter-context'.setup{
 
 ## Commands
 
-`TSContextEnable`, `TSContextDisable` and `TSContextToggle`.
+`TSContext` with subcommands `enable`, `disable` and `toggle`.
 
 ## Appearance
 

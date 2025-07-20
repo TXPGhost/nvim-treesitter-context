@@ -3,18 +3,18 @@ let k = 0;
 let l = 0;
 var list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
-switch i {
+switch i { // {{CONTEXT}}
 
-case let x
-where x > 0:
-
-
+case let x // {{CONTEXT}}
+where x > 0: // {{CONTEXT}}
 
 
 
 
 
-    print("i is greater than 0")
+
+
+    print("i is greater than 0") // {{CURSOR}}
 default:
 
 

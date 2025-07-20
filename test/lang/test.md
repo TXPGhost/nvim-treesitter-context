@@ -1,4 +1,5 @@
 ```html
+<!-- TODO: Add context tests for injected languages here once 0.9.5 support is dropped -->
 <html>
   <body>
 
@@ -44,13 +45,13 @@
 </html>
 ```
 
-# Title
+# Title {{CONTEXT}}
 
 
 
 
 
-Test
+Test {{CURSOR}}
 
 
 

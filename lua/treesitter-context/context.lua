@@ -46,9 +46,26 @@ local function get_parent_nodes(langtree, range)
 end
 
 --- @param winid integer
+--- @param percent string
+--- @return integer
+local function max_lines_from_string(winid, percent)
+  local win_height = api.nvim_win_get_height(winid)
+  local percent_s = percent:match('^(%d+)%%$')
+  local percent1 = percent_s and tonumber(percent_s, 10) or 0
+  return math.ceil((percent1 / 100) * win_height)
+end
+
+--- @param winid integer
 --- @return integer
 local function calc_max_lines(winid)
-  local max_lines = config.max_lines == 0 and -1 or config.max_lines
+  local max_lines = config.max_lines
+
+  if type(max_lines) == 'string' then
+    max_lines = max_lines_from_string(winid, max_lines)
+  end
+
+  -- ensure we never have zero as max lines
+  max_lines = max_lines == 0 and -1 or max_lines
 
   local wintop = fn.line('w0', winid)
   local cursor = fn.line('.', winid)
@@ -151,6 +168,9 @@ local function trim_contexts(context_ranges, context_lines, trim, top)
   while trim > 0 do
     local idx = top and 1 or #context_ranges
     local context_to_trim = context_ranges[idx]
+    if not context_to_trim then
+      return
+    end
 
     local height = util.get_range_height(context_to_trim)
 
@@ -215,6 +235,8 @@ local function get_parent_langtrees(bufnr, range)
     return {}
   end
 
+  --- @diagnostic disable-next-line:redundant-parameter added in 0.11
+  root_tree:parse(range, function(...) end)
   local ret = { root_tree }
 
   while true do
@@ -293,10 +315,12 @@ local function range_is_valid(range)
   return true
 end
 
---- @param bufnr integer
---- @param winid integer
+--- @param winid? integer
 --- @return Range4[]?, string[]?
-function M.get(bufnr, winid)
+function M.get(winid)
+  winid = winid or api.nvim_get_current_win()
+  local bufnr = api.nvim_win_get_buf(winid)
+
   -- vim.treesitter.get_parser() calls bufload(), but we don't actually want to load the buffer:
   -- this method is called during plugin init, before other plugins or the user's config
   -- have a chance to initialize.
@@ -339,7 +363,14 @@ function M.get(bufnr, winid)
     for parents, query in iter_context_parents(bufnr, line_range) do
       for _, parent in ipairs(parents) do
         local parent_start_row = parent:range()
-        local contexts_end_row = top_row + math.min(max_lines, contexts_height)
+
+        local num_context_lines = math.min(max_lines, contexts_height)
+
+        -- NOTE: this avoids covering up context by separator line
+        --  but only when there is a context to display
+        local separator_offset = (num_context_lines > 0 and config.separator) and 1 or 0
+
+        local contexts_end_row = top_row + separator_offset + num_context_lines
 
         -- Only process the parent if it is not in view.
         if parent_start_row < contexts_end_row then

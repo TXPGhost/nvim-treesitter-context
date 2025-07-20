@@ -1,4 +1,4 @@
-.class public Lbaksmali/test/class;
+.class public Lbaksmali/test/class; # BUG: The contexts here are extremely buggy and include too many newlines
 .super Ljava/lang/Object;
 
 .source "baksmali_test_class.smali"

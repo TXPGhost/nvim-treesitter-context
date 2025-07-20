@@ -1,8 +1,9 @@
-@Deprecated('')
-abstract 
-class User 
-    extends 
-      Object {
+// {{TEST}}
+@Deprecated('') // {{CONTEXT}}
+abstract // {{CONTEXT}}
+class User // {{CONTEXT}}
+    extends // {{CONTEXT}}
+      Object { // {{CONTEXT}}
   User(this.age);
   int age;
 
@@ -15,9 +16,9 @@ class User
 
 
 
+  // {{CURSOR}}
 
-
-  void printAge() {
+  void printAge() { // {{CONTEXT}}
   
 
 
@@ -32,28 +33,26 @@ class User
 
 
 
-    print(age);
+    print(age); // {{CURSOR}}
   }
 
 }
-
+// {{TEST}}
 String(
   int magicalNumber,
-) {
-  if (magicalNumber == "69"
-      // --
-      ||
-      magicalNumber == "420") {
+) { // {{CONTEXT}}
+  if (magicalNumber == "69" // {{CONTEXT}}
+      // {{CONTEXT}}
+      || // {{CONTEXT}}
+      magicalNumber == "420") { // {{CONTEXT}}
     return 'pretty nice';
 
 
 
-
-  } else if (magicalNumber == "420" // -
-      &&
-      magicalNumber == "69") {
-
-
+    // {{CURSOR}}
+  } else if (magicalNumber == "420" // {{CONTEXT}}
+      && // {{CONTEXT}}
+      magicalNumber == "69") { // {{CONTEXT}}
 
 
 
@@ -74,15 +73,18 @@ String(
 
 
 
-    return 'pretty high';
-  }
-  return 'just decent';
+
+
+    return 'pretty high'; // {{CURSOR}}
+  } // {{POPCONTEXT}}
+
+  return 'just decent'; // BUG: should mark cursor here
 }
 
-
-void catching() {
-  try 
-    // --
+// {{TEST}}
+void catching() { // {{CONTEXT}}
+  try // {{CONTEXT}}
+    // {{CONTEXT}}
   {
 
 
@@ -97,7 +99,7 @@ void catching() {
 
 
 
-
+    // {{CURSOR}}
   } catch (e) {
 
 
@@ -107,7 +109,7 @@ void catching() {
 
 
 
-
+    // {{CURSOR}}
 
   } finally {
 
@@ -120,17 +122,15 @@ void catching() {
 
 
 
-
+    // {{CURSOR}}
 
   }
 }
-
-void foring() {
-  for (int i = 0; // -
-        i < 10;
-        i++) {
-
-
+// {{TEST}}
+void foring() { // {{CONTEXT}}
+  for (int i = 0; // {{CONTEXT}}
+        i < 10; // {{CONTEXT}}
+        i++) { // {{CONTEXT}}
 
 
 
@@ -143,14 +143,14 @@ void foring() {
 
 
 
-  }
 
-  while (true // -- 
-  == false) {
+    // {{CURSOR}}
+  } // {{POPCONTEXT}}
+  // {{POPCONTEXT}}
+  // {{POPCONTEXT}}
 
-
-
-
+  while (true // {{CONTEXT}}
+  == false) { // {{CONTEXT}}
 
 
 
@@ -165,16 +165,14 @@ void foring() {
 
 
 
-}
-
-  do {
 
 
+    // {{CURSOR}}
 
+} // {{POPCONTEXT}}
+// {{POPCONTEXT}}
 
-
-
-
+  do { // {{CONTEXT}}
 
 
 
@@ -182,13 +180,18 @@ void foring() {
 
 
 
+
+
+
+
+
+
+  // {{CURSOR}}
 } while (true);
 }
-
-extension ext 
-on int {
-
-
+// {{TEST}}
+extension ext // {{CONTEXT}}
+on int { // {{CONTEXT}}
 
 
 
@@ -196,4 +199,6 @@ on int {
 
 
 
+
+  // {{CURSOR}}
 }

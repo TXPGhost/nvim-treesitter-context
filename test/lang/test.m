@@ -1,25 +1,33 @@
-if x < 0 &&
-  y < 0
+% {{TEST}}
+if x < 0 && % {{CONTEXT}}
+  y < 0 % {{CONTEXT}}
 
 
-  y = 0;
-elseif x < 1
+
+  y = 0; % {{CURSOR}}
+elseif x < 1 % {{CONTEXT}}
 
 
-  y = x;
-else
 
 
-  y = 1;
+  y = x; % {{CURSOR}}
+  % {{POPCONTEXT}}
+else % {{CONTEXT}}
+
+
+
+  y = 1; % {{CURSOR}}
 end
 
-while x < 5
+% {{TEST}}
+while x < 5 % {{CONTEXT}}
   print(x);
 
 
-  x = x + 1;
-end
+  x = x + 1; % {{CURSOR}}
+end % {{POPCONTEXT}}
 
+% {{TEST}}
 try
 
 
@@ -27,10 +35,11 @@ try
 catch ME
 
 
-  % do something else
+  % {{CURSOR}}
 end
 
-switch x
+% {{TEST}}
+switch x % {{CONTEXT}}
   case 1
 
 
@@ -39,23 +48,29 @@ switch x
 
 
     y = 2;
-  otherwise
+  otherwise % {{CONTEXT}}
 
 
-    y = 0;
-end
 
-function [C] = myMatMult(A,
-  B)
+    y = 0; % {{CURSOR}}
+  % {{POPCONTEXT}}
+end % {{POPCONTEXT}}
+
+% {{TEST}}
+function [C] = myMatMult(A, % {{CONTEXT}}
+  B) % {{CONTEXT}}
     [m,n] = size(A);
     [p,q] = size(B);
-    if n ~=
-      p
+    if n ~= % {{CONTEXT}}
+      p % {{CONTEXT}}
         error('Inner matrix dimensions must agree.');
 
 
-    end
-    C = zeros(m,q);
+
+      % {{CURSOR}}
+    end % {{POPCONTEXT}}
+    % {{POPCONTEXT}}
+    C = zeros(m,q); % {{CURSOR}}
     for i =
       1:m
 

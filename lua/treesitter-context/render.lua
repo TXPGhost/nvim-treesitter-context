@@ -37,20 +37,6 @@ local function create_or_get_buf()
   return buf
 end
 
-local function delete_excess_buffers()
-  if fn.getcmdwintype() ~= '' then
-    -- Can't delete buffers when the command-line window is open.
-    return
-  end
-
-  while #buffer_pool > MAX_BUFFER_POOL_SIZE do
-    local buf = table.remove(buffer_pool, #buffer_pool)
-    if api.nvim_buf_is_valid(buf) then
-      api.nvim_buf_delete(buf, { force = true })
-    end
-  end
-end
-
 --- @param winid integer
 --- @param context_winid integer?
 --- @param width integer
@@ -73,7 +59,7 @@ local function display_window(winid, context_winid, width, height, col, ty, hl)
       style = 'minimal',
       noautocmd = true,
       zindex = config.zindex,
-      border = sep and { '', '', '', '', sep, sep, sep, '' } or nil,
+      border = sep and { '', '', '', '', sep, sep, sep, '' } or 'none',
     })
     vim.w[context_winid][ty] = true
     vim.wo[context_winid].wrap = false
@@ -138,11 +124,13 @@ local function get_hl(buf_query, capture)
 end
 
 --- Is a position a after another position b?
---- @param a [integer, integer] [row, col]
---- @param b [integer, integer] [row, col]
+--- @param arow integer
+--- @param acol integer
+--- @param brow integer
+--- @param bcol integer
 --- @return boolean
-local function is_after(a, b)
-  return a[1] > b[1] or (a[1] == b[1] and a[2] > b[2])
+local function is_after(arow, acol, brow, bcol)
+  return arow > brow or (arow == brow and acol > bcol)
 end
 
 --- @param bufnr integer
@@ -182,10 +170,10 @@ local function highlight_contexts(bufnr, ctx_bufnr, contexts)
         local nsrow, nscol, nerow, necol = range[1], range[2], range[4], range[5]
 
         if nsrow >= start_row then
-          if is_after({ nsrow, nscol }, { end_row, end_col }) then
+          if is_after(nsrow, nscol, end_row, end_col) then
             -- Node range begins after the context range, skip it
             break
-          elseif is_after({ nerow, necol }, { end_row, end_col }) then
+          elseif is_after(nerow, necol, end_row, end_col) then
             -- Node range extends beyond the context range, clip it
             nerow, necol = end_row, end_col
           end
@@ -225,6 +213,7 @@ end
 
 --- @class StatusLineHighlight
 --- @field group string
+--- @field groups? string[]
 --- @field start integer
 
 --- @param ctx_node_line_num integer
@@ -291,9 +280,14 @@ local function highlight_lno_str(buf, text, highlights)
       local col = hl.start
       local endcol = hlidx < #linehl and linehl[hlidx + 1].start or #text[line]
       if col ~= endcol then
+        local hl_groups = hl.groups or { hl.group }
+        for i, shl in ipairs(hl_groups) do
+          hl_groups[i] = shl:find('LineNr') and 'TreesitterContextLineNumber' or shl
+        end
         add_extmark(buf, line - 1, col, {
           end_col = endcol,
-          hl_group = hl.group:find('LineNr') and 'TreesitterContextLineNumber' or hl.group,
+          --- @diagnostic disable-next-line:assign-type-mismatch added in 0.11
+          hl_group = hl.groups and hl_groups or hl_groups[1],
         })
       end
     end
@@ -318,7 +312,9 @@ local function set_lines(bufnr, lines)
   end
 
   if redraw then
+    vim.bo[bufnr].modifiable = true
     api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+    vim.bo[bufnr].modifiable = false
     vim.bo[bufnr].modified = false
   end
 
@@ -349,18 +345,28 @@ end
 --- @param context_winid? integer
 local function close(context_winid)
   vim.schedule(function()
-    if context_winid == nil or not api.nvim_win_is_valid(context_winid) then
+    if not context_winid or not api.nvim_win_is_valid(context_winid) then
       return
     end
 
     local bufnr = api.nvim_win_get_buf(context_winid)
     api.nvim_win_close(context_winid, true)
-    if bufnr ~= nil and api.nvim_buf_is_valid(bufnr) then
-      -- We can't delete the buffer in-place if the pool is full and the command-line window is open.
-      -- Instead, add the buffer to the pool and let delete_excess_buffers() address this situation.
-      table.insert(buffer_pool, bufnr)
+
+    -- Add the buffer back to the pool for reuse.
+    if bufnr and api.nvim_buf_is_valid(bufnr) then
+      buffer_pool[#buffer_pool + 1] = bufnr
     end
-    delete_excess_buffers()
+
+    -- Delete excess buffers in the pool.
+    -- Can't delete buffers when the command-line window is open.
+    if fn.getcmdwintype() == '' then
+      while #buffer_pool > MAX_BUFFER_POOL_SIZE do
+        local buf = table.remove(buffer_pool, #buffer_pool)
+        if api.nvim_buf_is_valid(buf) then
+          api.nvim_buf_delete(buf, { force = true })
+        end
+      end
+    end
   end)
 end
 
@@ -393,24 +399,41 @@ local function copy_extmarks(bufnr, ctx_bufnr, contexts)
       { details = true }
     )
 
-    for _, m in ipairs(extmarks) do
-      local id = m[1]
-      local row = m[2]
-      local col = m[3] --[[@as integer]]
-      local opts = m[4] --[[@as vim.api.keyset.extmark_details]]
+    local namespaces = {} --- @type table<integer, true>
+    for nm, id in pairs(api.nvim_get_namespaces()) do
+      -- Only copy extmarks from core as they are the only ones we can update
+      -- reliably.
+      if vim.startswith(nm, 'nvim.') then
+        namespaces[id] = true
+      end
+    end
 
+    --- @param e vim.api.keyset.get_extmark_item
+    extmarks = vim.tbl_filter(function(e)
+      local opts = e[4] --[[@as vim.api.keyset.extmark_details]]
+      return namespaces[opts.ns_id]
+    end, extmarks)
+
+    for _, m in ipairs(extmarks) do
+      local id, row, col = m[1], m[2], m[3]
+      local opts = m[4] --[[@as vim.api.keyset.extmark_details]]
       local start_row = offset + (row - ctx_srow)
 
       local end_row --- @type integer?
       local end_col = opts.end_col
       local mend_row = opts.end_row
       if mend_row then
-        if is_after({ mend_row, end_col }, { ctx_erow, ctx_ecol }) then
+        if is_after(mend_row, assert(end_col), ctx_erow, ctx_ecol) then
           mend_row = ctx_erow
           end_col = ctx_ecol
         end
 
         end_row = offset + (mend_row - ctx_srow)
+      end
+
+      local virt_text_pos = opts.virt_text_pos
+      if virt_text_pos == 'win_col' then
+        virt_text_pos = nil
       end
 
       -- Use pcall incase fields from opts are inconsistent with opts in
@@ -427,7 +450,7 @@ local function copy_extmarks(bufnr, ctx_bufnr, contexts)
         hl_eol = opts.hl_eol,
         virt_text = opts.virt_text,
         virt_text_hide = opts.virt_text_hide,
-        virt_text_pos = opts.virt_text_pos,
+        virt_text_pos = virt_text_pos,
         virt_text_repeat_linebreak = opts.virt_text_repeat_linebreak,
         virt_text_win_col = opts.virt_text_win_col,
         hl_mode = opts.hl_mode,
@@ -443,39 +466,12 @@ end
 
 local M = {}
 
--- Contexts may sometimes leak due to reasons like the use of 'noautocmd'.
--- In these cases, affected windows might remain visible, and even ToggleContext
--- won't resolve the issue, as contexts are identified using parent windows.
--- Therefore, it's essential to occasionally perform garbage collection to
--- clean up these leaked contexts.
-function M.close_leaked_contexts()
-  local all_wins = api.nvim_list_wins()
-
-  for parent_winid, window_context in pairs(window_contexts) do
-    if not vim.tbl_contains(all_wins, parent_winid) then
-      close(window_context.context_winid)
-      close(window_context.gutter_winid)
-      window_contexts[parent_winid] = nil
-    end
-  end
-end
-
---- @param winid integer The only window for which the context should be displayed.
-function M.close_other_contexts(winid)
-  for parent_winid, window_context in pairs(window_contexts) do
-    if parent_winid ~= winid then
-      close(window_context.context_winid)
-      close(window_context.gutter_winid)
-      window_contexts[parent_winid] = nil
-    end
-  end
-end
-
---- @param bufnr integer
 --- @param winid integer
 --- @param ctx_ranges Range4[]
 --- @param ctx_lines string[]
-function M.open(bufnr, winid, ctx_ranges, ctx_lines)
+--- @param force_hl_update? boolean
+function M.open(winid, ctx_ranges, ctx_lines, force_hl_update)
+  local bufnr = api.nvim_win_get_buf(winid)
   local gutter_width = get_gutter_width(winid)
   local win_width = math.max(1, api.nvim_win_get_width(winid) - gutter_width)
 
@@ -484,7 +480,7 @@ function M.open(bufnr, winid, ctx_ranges, ctx_lines)
   window_contexts[winid] = window_contexts[winid] or {}
   local window_context = window_contexts[winid]
 
-  if config.line_numbers and (vim.wo[winid].number or vim.wo[winid].relativenumber) then
+  if gutter_width > 0 then
     window_context.gutter_winid = display_window(
       winid,
       window_context.gutter_winid,
@@ -494,8 +490,10 @@ function M.open(bufnr, winid, ctx_ranges, ctx_lines)
       'treesitter_context_line_number',
       'TreesitterContextLineNumber'
     )
-
-    if api.nvim_win_is_valid(window_context.gutter_winid) then
+    if
+      api.nvim_win_is_valid(window_context.gutter_winid)
+      and (vim.wo[winid].number or vim.wo[winid].relativenumber)
+    then
       render_lno(winid, api.nvim_win_get_buf(window_context.gutter_winid), ctx_ranges, gutter_width)
     end
   else
@@ -519,37 +517,35 @@ function M.open(bufnr, winid, ctx_ranges, ctx_lines)
 
   local ctx_bufnr = api.nvim_win_get_buf(window_context.context_winid)
 
-  if not set_lines(ctx_bufnr, ctx_lines) then
-    -- Context didn't change, can return here
-    return
-  end
+  local changed = set_lines(ctx_bufnr, ctx_lines)
 
-  api.nvim_buf_clear_namespace(ctx_bufnr, -1, 0, -1)
-  highlight_contexts(bufnr, ctx_bufnr, ctx_ranges)
-  copy_extmarks(bufnr, ctx_bufnr, ctx_ranges)
-  highlight_bottom(ctx_bufnr, win_height - 1, 'TreesitterContextBottom')
-  horizontal_scroll_contexts(winid, window_context.context_winid)
+  if changed or force_hl_update then
+    -- Update highlights
+    api.nvim_buf_clear_namespace(ctx_bufnr, -1, 0, -1)
+    highlight_contexts(bufnr, ctx_bufnr, ctx_ranges)
+    copy_extmarks(bufnr, ctx_bufnr, ctx_ranges)
+    highlight_bottom(ctx_bufnr, win_height - 1, 'TreesitterContextBottom')
+    horizontal_scroll_contexts(winid, window_context.context_winid)
+  end
 end
 
---- @param winid? integer
+--- @param exclude_winids integer[] The only window for which the context should be displayed.
+function M.close_contexts(exclude_winids)
+  for winid in pairs(window_contexts) do
+    if not vim.tbl_contains(exclude_winids, winid) then
+      M.close(winid)
+    end
+  end
+end
+
+--- @param winid integer
 function M.close(winid)
-  -- Can't close other windows when the command-line window is open
-  if fn.getcmdwintype() ~= '' then
-    return
-  end
-
-  if winid == nil then
-    return
-  end
-
   local window_context = window_contexts[winid]
-  if window_context == nil then
-    return
+  if window_context then
+    close(window_context.context_winid)
+    close(window_context.gutter_winid)
+    window_contexts[winid] = nil
   end
-  close(window_context.context_winid)
-  close(window_context.gutter_winid)
-
-  window_contexts[winid] = nil
 end
 
 return M
