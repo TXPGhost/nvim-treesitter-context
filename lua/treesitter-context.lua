@@ -44,7 +44,7 @@ local function throttle_by_id(f)
         -- Start a timer to check if the function needs to run again
         -- after the throttling period.
         timers[id] = timers[id] or assert(vim.loop.new_timer())
-        timers[id]:start(150, 0, function()
+        timers[id]:start(ms, 0, function()
           scheduled[id] = nil
           if waiting[id] then
             -- r was called again within throttling period; reschedule it.
@@ -280,11 +280,6 @@ function M.setup(options)
     M.enable()
   else
     M.disable()
-  end
-
-  if not did_init then
-    init()
-    did_init = true
   end
 
   ms = config.update_debounce
